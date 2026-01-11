@@ -11,8 +11,34 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 
-<body>
-  <div class="bg-glow"></div>
+ <body>
+
+  <!-- LOGIN GATE -->
+  <div id="loginGate" class="login-gate">
+    <div class="login-card">
+      <h2>Credora Demo Access</h2>
+      <p>This demo is restricted. Please enter access credentials.</p>
+
+      <input id="usernameInput" type="text" placeholder="Username" />
+      <input id="passwordInput" type="password" placeholder="Password" />
+
+      <button id="loginBtn">Enter Demo</button>
+      <div id="loginError">Invalid credentials</div>
+    </div>
+  </div>
+
+  <!-- SITE CONTENT -->
+  <div id="siteContent" style="display:none;">
+    <div class="bg-glow"></div>
+
+    <!-- 🔽 EVERYTHING ELSE GOES HERE 🔽 -->
+    <!-- (your full existing HTML unchanged) -->
+  </div>
+
+  <script src="auth.js"></script>
+  <script src="app.js"></script>
+</body>
+
 
   <!-- Minimal Nav -->
   <header class="nav">
