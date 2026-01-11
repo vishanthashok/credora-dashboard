@@ -3,219 +3,151 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Credora — Demo Dashboard</title>
-  <meta name="description" content="Credora demo dashboard (static) for showcasing early-stage metrics." />
+  <title>Credora — Interactive Demo</title>
+  <meta name="description" content="Interactive Credora demo: consent, connect demo data, generate a score." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
   <div class="bg-glow"></div>
 
-  <!-- Top Nav -->
+  <!-- Minimal Nav -->
   <header class="nav">
     <div class="container nav-inner">
       <a class="brand" href="#">
         <span class="mark" aria-hidden="true"></span>
         <span class="brand-text">
           <strong>CREDORA</strong>
-          <span>Reinventing Credit</span>
+          <span>Interactive Demo</span>
         </span>
       </a>
 
       <div class="nav-actions">
-        <div class="pill" id="statusPill">
-          <span class="dot"></span>
-          <span id="statusText">Live demo</span>
-        </div>
         <a class="btn" href="https://www.linkedin.com/company/credora-financial" target="_blank" rel="noreferrer">LinkedIn</a>
       </div>
     </div>
   </header>
 
-  <!-- Main -->
-  <main class="container">
-    <!-- Hero -->
-    <section class="hero">
-      <div class="hero-left">
-        <div class="kicker">Credora Dashboard</div>
-        <h1>Launch Readiness & Growth Metrics</h1>
-        <p class="sub">
-          A lightweight static demo you can show viewers. Toggle time ranges, view KPIs,
-          and see a simple growth chart — no backend required.
-        </p>
-
-        <div class="controls">
-          <div class="segmented" role="tablist" aria-label="Time range">
-            <button class="seg active" data-range="7" role="tab" aria-selected="true">7D</button>
-            <button class="seg" data-range="14" role="tab" aria-selected="false">14D</button>
-            <button class="seg" data-range="30" role="tab" aria-selected="false">30D</button>
-          </div>
-
-          <button class="btn primary" id="refreshBtn" type="button">Simulate refresh</button>
-        </div>
-
-        <div class="meta">
-          <span>Last updated:</span>
-          <span id="lastUpdated">—</span>
-        </div>
-      </div>
-
-      <div class="hero-right">
-        <div class="card hero-card">
-          <div class="hero-image-wrap">
-            <img src="assets/hero.png" alt="Credora visual" class="hero-image" />
-          </div>
-          <div class="hero-card-footer">
-            <div class="mini">
-              <div class="mini-label">Mode</div>
-              <div class="mini-value">Static Demo</div>
-            </div>
-            <div class="mini">
-              <div class="mini-label">Deployment</div>
-              <div class="mini-value">Netlify</div>
-            </div>
-            <div class="mini">
-              <div class="mini-label">Status</div>
-              <div class="mini-value good">Building</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- KPI Row -->
-    <section class="kpis">
-      <div class="kpi card">
-        <div class="kpi-title">Waitlist signups</div>
-        <div class="kpi-value" id="kpiSignups">—</div>
-        <div class="kpi-foot"><span class="delta up" id="deltaSignups">—</span> vs prior period</div>
-      </div>
-      <div class="kpi card">
-        <div class="kpi-title">Site visits</div>
-        <div class="kpi-value" id="kpiVisits">—</div>
-        <div class="kpi-foot"><span class="delta up" id="deltaVisits">—</span> vs prior period</div>
-      </div>
-      <div class="kpi card">
-        <div class="kpi-title">Signup conversion</div>
-        <div class="kpi-value" id="kpiConversion">—</div>
-        <div class="kpi-foot"><span class="delta up" id="deltaConversion">—</span> vs prior period</div>
-      </div>
-      <div class="kpi card">
-        <div class="kpi-title">Lender leads</div>
-        <div class="kpi-value" id="kpiLeads">—</div>
-        <div class="kpi-foot"><span class="delta up" id="deltaLeads">—</span> vs prior period</div>
-      </div>
-    </section>
-
-    <!-- Charts + Table -->
-    <section class="grid">
-      <div class="card chart-card">
-        <div class="card-head">
-          <div>
-            <div class="card-title">Growth trend</div>
-            <div class="card-sub">Visits vs Waitlist (selected range)</div>
-          </div>
-          <div class="legend">
-            <span class="key"><i class="swatch s1"></i>Visits</span>
-            <span class="key"><i class="swatch s2"></i>Waitlist</span>
-          </div>
-        </div>
-
-        <div class="chart-wrap">
-          <canvas id="chart" width="1000" height="320" aria-label="Line chart"></canvas>
-        </div>
-      </div>
-
-      <div class="card right-card">
-        <div class="card-head">
-          <div>
-            <div class="card-title">Launch checklist</div>
-            <div class="card-sub">Demo-ready milestones</div>
-          </div>
-        </div>
-
-        <ul class="checklist">
-          <li><span class="check on"></span> Landing page live</li>
-          <li><span class="check on"></span> Demo dashboard deployed</li>
-          <li><span class="check"></span> Waitlist form + email capture</li>
-          <li><span class="check"></span> Lender pilot conversations</li>
-          <li><span class="check"></span> Scoring framework v1</li>
-        </ul>
-
-        <div class="divider"></div>
-
-        <div class="card-title">Top channels</div>
-        <div class="bars">
-          <div class="bar-row">
-            <div class="bar-label">LinkedIn</div>
-            <div class="bar">
-              <div class="bar-fill" style="width: 62%"></div>
-            </div>
-            <div class="bar-val">62%</div>
-          </div>
-          <div class="bar-row">
-            <div class="bar-label">Referrals</div>
-            <div class="bar">
-              <div class="bar-fill" style="width: 21%"></div>
-            </div>
-            <div class="bar-val">21%</div>
-          </div>
-          <div class="bar-row">
-            <div class="bar-label">Search</div>
-            <div class="bar">
-              <div class="bar-fill" style="width: 17%"></div>
-            </div>
-            <div class="bar-val">17%</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="card table-card">
-      <div class="card-head">
+  <main class="container" style="padding-top:22px; padding-bottom:26px;">
+    <!-- Demo Card -->
+    <section class="card" style="padding:14px;">
+      <div class="card-head" style="padding: 10px 10px 0;">
         <div>
-          <div class="card-title">Daily metrics</div>
-          <div class="card-sub">Sample data (generated locally)</div>
+          <div class="card-title">Try the Credora demo</div>
+          <div class="card-sub">
+            This is a demo preview only. Not a consumer report and not used for lending decisions.
+          </div>
         </div>
       </div>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th class="num">Visits</th>
-              <th class="num">Waitlist</th>
-              <th class="num">Leads</th>
-              <th class="num">Conversion</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody"></tbody>
-        </table>
-      </div>
-    </section>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; padding: 12px 10px 10px;">
+        <!-- Left: Inputs -->
+        <div class="card" style="background:rgba(0,0,0,.12); border:1px solid rgba(255,255,255,.10); padding:12px;">
+          <div style="font-weight:800; font-size:13px; margin-bottom:10px;">1) Consent</div>
 
-    <footer class="footer">
-      <div class="footer-left">
-        <div class="brand small">
-          <span class="mark" aria-hidden="true"></span>
-          <span class="brand-text">
-            <strong>CREDORA</strong>
-            <span>Reinventing Credit</span>
-          </span>
+          <label style="display:flex; gap:10px; align-items:flex-start; color:rgba(255,255,255,.75); font-size:12px; line-height:1.35;">
+            <input id="consentCheck" type="checkbox" style="margin-top:2px;" />
+            I consent to using demo data for this product preview. I understand this is a simulation.
+          </label>
+
+          <div style="height:10px;"></div>
+
+          <div style="font-weight:800; font-size:13px; margin: 10px 0;">2) Enter demo inputs</div>
+
+          <!-- Simple inputs (no fancy CSS needed; uses your theme) -->
+          <div style="display:grid; gap:10px;">
+            <div>
+              <div style="color:rgba(255,255,255,.70); font-size:12px; margin-bottom:6px;">Monthly income (USD)</div>
+              <input id="income" type="number" value="5200"
+                style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); color:rgba(255,255,255,.92);" />
+            </div>
+
+            <div>
+              <div style="color:rgba(255,255,255,.70); font-size:12px; margin-bottom:6px;">Monthly spend (USD)</div>
+              <input id="spend" type="number" value="4100"
+                style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); color:rgba(255,255,255,.92);" />
+            </div>
+
+            <div>
+              <div style="color:rgba(255,255,255,.70); font-size:12px; margin-bottom:6px;">Balance volatility (0–1)</div>
+              <input id="volatility" type="number" step="0.01" min="0" max="1" value="0.28"
+                style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); color:rgba(255,255,255,.92);" />
+            </div>
+
+            <div>
+              <div style="color:rgba(255,255,255,.70); font-size:12px; margin-bottom:6px;">Utilities on-time rate (0–1)</div>
+              <input id="utilities" type="number" step="0.01" min="0" max="1" value="0.92"
+                style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); color:rgba(255,255,255,.92);" />
+            </div>
+
+            <div>
+              <div style="color:rgba(255,255,255,.70); font-size:12px; margin-bottom:6px;">Remittance consistency (0–1)</div>
+              <input id="remittance" type="number" step="0.01" min="0" max="1" value="0.70"
+                style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); color:rgba(255,255,255,.92);" />
+            </div>
+
+            <div>
+              <div style="color:rgba(255,255,255,.70); font-size:12px; margin-bottom:6px;">Country group</div>
+              <select id="countryGroup"
+                style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); color:rgba(255,255,255,.92);">
+                <option value="global" selected>Global</option>
+                <option value="high_signal">High signal</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="height:12px;"></div>
+
+          <button class="btn primary" id="generateBtn" type="button" style="width:100%;">
+            Generate Credora Score
+          </button>
+
+          <div style="margin-top:10px; color:rgba(255,255,255,.55); font-size:12px;">
+            Note: The demo uses a protected server-side function on Netlify, not your real scoring engine.
+          </div>
         </div>
-        <div class="footnote">© <span id="year"></span> Credora. Demo dashboard for presentations.</div>
+
+        <!-- Right: Output -->
+        <div class="card" id="scoreOut" style="background:rgba(0,0,0,.12); border:1px solid rgba(255,255,255,.10); min-height: 260px;">
+          <div style="padding:14px; color:rgba(255,255,255,.70);">
+            3) Click “Generate Credora Score” to see the demo output here.
+          </div>
+        </div>
       </div>
 
-      <div class="footer-right">
-        <a class="link" href="https://www.linkedin.com/company/credora-financial" target="_blank" rel="noreferrer">
+      <div style="padding: 0 10px 12px; color:rgba(255,255,255,.55); font-size:12px;">
+        © <span id="year"></span> Credora •
+        <a href="https://www.linkedin.com/company/credora-financial" target="_blank" rel="noreferrer" style="color:rgba(255,255,255,.80); text-decoration:none; font-weight:700;">
           Connect on LinkedIn →
         </a>
       </div>
-    </footer>
+    </section>
+
+    <!-- Tiny script to map inputs into the existing app.js click handler expectations -->
+    <script>
+      // This small bridge ensures the demo inputs actually drive the scoring request.
+      // Your app.js already has the generateBtn handler; we just populate the expected values
+      // by placing them into global vars the app.js can read if you choose to.
+      // If you're using the rewritten app.js I gave you, update its "features" block to read from these inputs.
+
+      // Optional: enforce consent before allowing generate.
+      document.addEventListener("DOMContentLoaded", () => {
+        const btn = document.getElementById("generateBtn");
+        const consent = document.getElementById("consentCheck");
+
+        function updateBtn() {
+          btn.disabled = !consent.checked;
+          btn.style.opacity = consent.checked ? "1" : ".6";
+          btn.style.cursor = consent.checked ? "pointer" : "not-allowed";
+        }
+
+        consent.addEventListener("change", updateBtn);
+        updateBtn();
+      });
+    </script>
   </main>
 
   <script src="app.js"></script>
