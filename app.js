@@ -1,440 +1,279 @@
-// --- Demo catalog (replace / expand with your own TMDB IDs) ---
-const CATALOG = {
-  featured: {
-    id: "119051",
-    mediaType: "tv",
-    title: "The Last of Us",
-    desc: "Opens the Vidking embed player in a modal. Progress events are saved locally.",
-    season: 1,
-    episode: 8,
-    accent: "e50914", // Netflix red
-    autoPlay: true,
-    nextEpisode: true,
-    episodeSelector: true
-  },
-  rails: [
-    {
-      title: "Trending Now",
-      sub: "Quick picks (demo data)",
-      items: [
-        { mediaType: "movie", id: "1078605", title: "Movie Demo (TMDB 1078605)", accent: "9146ff", autoPlay: true },
-        { mediaType: "tv", id: "119051", title: "The Last of Us (S1E8)", season: 1, episode: 8, accent: "e50914", autoPlay: true, nextEpisode: true, episodeSelector: true },
-        { mediaType: "movie", id: "299534", title: "Movie Demo (TMDB 299534)", accent: "0dcaf0", autoPlay: false },
-        { mediaType: "movie", id: "634649", title: "Movie Demo (TMDB 634649)", accent: "22c55e", autoPlay: true },
-        { mediaType: "tv", id: "1399", title: "TV Demo (TMDB 1399) S1E1", season: 1, episode: 1, accent: "4DA3FF", autoPlay: false, nextEpisode: true, episodeSelector: true }
-      ]
-    },
-    {
-      title: "Because you watched",
-      sub: "More like this (demo)",
-      items: [
-        { mediaType: "movie", id: "27205", title: "Movie Demo (TMDB 27205)", accent: "f59e0b", autoPlay: true },
-        { mediaType: "movie", id: "603692", title: "Movie Demo (TMDB 603692)", accent: "ec4899", autoPlay: false },
-        { mediaType: "tv", id: "82856", title: "TV Demo (TMDB 82856) S1E1", season: 1, episode: 1, accent: "0dcaf0", autoPlay: false, nextEpisode: true, episodeSelector: true },
-        { mediaType: "movie", id: "155", title: "Movie Demo (TMDB 155)", accent: "4DA3FF", autoPlay: false }
-      ]
-    },
-    {
-      title: "4K / Premium Feel",
-      sub: "Big, glossy, cinematic UI",
-      items: [
-        { mediaType: "movie", id: "447277", title: "Movie Demo (TMDB 447277)", accent: "22c55e", autoPlay: true },
-        { mediaType: "movie", id: "550", title: "Movie Demo (TMDB 550)", accent: "e50914", autoPlay: false },
-        { mediaType: "tv", id: "60625", title: "TV Demo (TMDB 60625) S1E1", season: 1, episode: 1, accent: "9146ff", autoPlay: false, nextEpisode: true, episodeSelector: true }
-      ]
-    }
-  ]
+// Credora Demo Dashboard (no dependencies)
+
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+const state = {
+  range: 7,
+  data: []
 };
 
-// --- Helpers ---
-const $ = (sel) => document.querySelector(sel);
-
-function buildEmbedUrl(item, { progressSeconds } = {}) {
-  const base =
-    item.mediaType === "movie"
-      ? `https://www.vidking.net/embed/movie/${item.id}`
-      : `https://www.vidking.net/embed/tv/${item.id}/${item.season ?? 1}/${item.episode ?? 1}`;
-
-  const params = new URLSearchParams();
-  if (item.accent) params.set("color", (item.accent || "").replace("#", ""));
-  if (item.autoPlay) params.set("autoPlay", "true");
-  if (item.mediaType === "tv") {
-    if (item.nextEpisode) params.set("nextEpisode", "true");
-    if (item.episodeSelector) params.set("episodeSelector", "true");
-  }
-  if (typeof progressSeconds === "number" && progressSeconds > 0) {
-    params.set("progress", String(Math.floor(progressSeconds)));
-  }
-
-  const qs = params.toString();
-  return qs ? `${base}?${qs}` : base;
+function pad(n){ return String(n).padStart(2, "0"); }
+function formatDate(d){
+  const yyyy = d.getFullYear();
+  const mm = pad(d.getMonth() + 1);
+  const dd = pad(d.getDate());
+  return `${yyyy}-${mm}-${dd}`;
+}
+function fmtInt(n){
+  return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+function fmtPct(x){
+  return `${x.toFixed(2)}%`;
+}
+function pctChange(curr, prev){
+  if (prev <= 0) return 100;
+  return ((curr - prev) / prev) * 100;
+}
+function setDelta(el, value){
+  const rounded = Math.abs(value) < 0.01 ? 0 : value;
+  el.classList.remove("up","down");
+  el.classList.add(rounded >= 0 ? "up" : "down");
+  el.textContent = `${rounded >= 0 ? "▲" : "▼"} ${Math.abs(rounded).toFixed(1)}%`;
 }
 
-function contentKey(item) {
-  // unique-ish key for progress tracking
-  if (item.mediaType === "movie") return `movie:${item.id}`;
-  return `tv:${item.id}:s${item.season ?? 1}:e${item.episode ?? 1}`;
+function randomAround(base, variance){
+  const delta = (Math.random() * 2 - 1) * variance;
+  return Math.max(0, Math.round(base + delta));
 }
 
-function saveProgress(key, payload) {
-  localStorage.setItem(`vk_progress:${key}`, JSON.stringify(payload));
-}
-function loadProgress(key) {
-  try {
-    const raw = localStorage.getItem(`vk_progress:${key}`);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
+// Generates sample daily data for N days
+function generateData(days){
+  const out = [];
+  const now = new Date();
 
-function setAccent(hex) {
-  const clean = (hex || "").replace("#", "");
-  const val = clean ? `#${clean}` : "#4DA3FF";
-  document.documentElement.style.setProperty("--accent", val);
-}
+  // base curves (so it looks like growth)
+  let visitsBase = 220;
+  let signupsBase = 18;
+  let leadsBase = 2;
 
-// --- UI render ---
-const railsEl = $("#rails");
-const pageTitleEl = $("#pageTitle");
-const searchInput = $("#searchInput");
-const searchHint = $("#searchHint");
+  for (let i = days - 1; i >= 0; i--){
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
 
-const heroTitleEl = $("#heroTitle");
-const heroDescEl = $("#heroDesc");
-const heroMetaEl = $("#heroMeta");
-const heroPlayBtn = $("#heroPlay");
-const heroInfoBtn = $("#heroInfo");
+    // gentle growth
+    visitsBase *= 1.018;
+    signupsBase *= 1.025;
 
-const modal = $("#playerModal");
-const modalBackdrop = $("#modalBackdrop");
-const closeModalBtn = $("#closeModal");
-const playerFrame = $("#playerFrame");
-const modalTitleEl = $("#modalTitle");
-const modalSubEl = $("#modalSub");
-const messageArea = $("#messageArea");
+    const visits = randomAround(visitsBase, 40);
+    const signups = randomAround(signupsBase, 6);
+    const leads = randomAround(leadsBase + (i % 6 === 0 ? 1 : 0), 2);
 
-const progressFill = $("#progressFill");
-const progressText = $("#progressText");
-const resumeBtn = $("#resumeBtn");
-const copyLinkBtn = $("#copyLinkBtn");
-const colorToggleBtn = $("#colorToggle");
+    const conversion = visits > 0 ? (signups / visits) * 100 : 0;
 
-let currentItem = null;
-let currentEmbedUrl = "";
-let sidebarOpen = false;
-
-// Build cards
-function cardHTML(item) {
-  const key = contentKey(item);
-  const last = loadProgress(key);
-  const pct = last?.data?.progress ?? last?.progress ?? null;
-
-  const badges = [];
-  badges.push(item.mediaType.toUpperCase());
-  badges.push(`TMDB ${item.id}`);
-  if (item.mediaType === "tv") badges.push(`S${item.season ?? 1}E${item.episode ?? 1}`);
-  if (typeof pct === "number") badges.push(`${pct.toFixed(0)}%`);
-
-  return `
-    <div class="card" role="button" tabindex="0" data-item='${encodeURIComponent(JSON.stringify(item))}'>
-      <div class="poster"></div>
-      <div class="cardBody">
-        <div class="cardTitle">${escapeHTML(item.title)}</div>
-        <div class="cardMeta">
-          ${badges.map(b => `<span class="badge">${escapeHTML(b)}</span>`).join("")}
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function renderRails(filter = "") {
-  const q = (filter || "").trim().toLowerCase();
-
-  railsEl.innerHTML = CATALOG.rails
-    .map((rail) => {
-      const items = rail.items.filter((it) => {
-        if (!q) return true;
-        const hay = `${it.title} ${it.mediaType} ${it.id}`.toLowerCase();
-        return hay.includes(q);
-      });
-
-      if (items.length === 0) return "";
-
-      return `
-        <div class="rail">
-          <div class="railTop">
-            <div>
-              <div class="railTitle">${escapeHTML(rail.title)}</div>
-              <div class="railSub">${escapeHTML(rail.sub)}</div>
-            </div>
-            <div class="railSub">${items.length} titles</div>
-          </div>
-          <div class="row">
-            ${items.map(cardHTML).join("")}
-          </div>
-        </div>
-      `;
-    })
-    .join("");
-
-  // Bind clicks
-  railsEl.querySelectorAll(".card").forEach((card) => {
-    const openFromCard = () => {
-      const raw = decodeURIComponent(card.getAttribute("data-item") || "");
-      const item = JSON.parse(raw);
-      openPlayer(item);
-    };
-    card.addEventListener("click", openFromCard);
-    card.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") openFromCard();
+    out.push({
+      date: formatDate(d),
+      visits,
+      signups,
+      leads,
+      conversion
     });
-  });
-
-  if (q) {
-    searchHint.textContent = `Filtering: “${filter}”`;
-  } else {
-    searchHint.textContent = `Try “tv” or “movie”`;
   }
+
+  return out;
 }
 
-// Hero
-function renderHero(item) {
-  heroTitleEl.textContent = item.title;
-  heroDescEl.textContent = item.desc || "Click Play to open the player.";
-  heroMetaEl.innerHTML = `
-    <span class="tag">${item.mediaType.toUpperCase()}</span>
-    <span class="tag">TMDB: ${item.id}</span>
-    ${
-      item.mediaType === "tv"
-        ? `<span class="tag">S${item.season ?? 1} · E${item.episode ?? 1}</span>`
-        : `<span class="tag">Movie</span>`
-    }
-  `;
-  setAccent(item.accent || "4DA3FF");
+// Canvas chart (simple line chart)
+function drawChart(canvas, seriesA, seriesB){
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
 
-  heroPlayBtn.onclick = () => openPlayer(item);
-  heroInfoBtn.onclick = () => {
-    const key = contentKey(item);
-    const last = loadProgress(key);
-    const pct = last?.data?.progress ?? last?.progress ?? 0;
-    alert(`Saved progress for this title: ${pct ? pct.toFixed(0) : 0}% (localStorage)`);
+  // Clear
+  ctx.clearRect(0,0,W,H);
+
+  // Scale with padding
+  const padX = 48;
+  const padY = 28;
+
+  const maxY = Math.max(
+    ...seriesA.map(d => d.y),
+    ...seriesB.map(d => d.y)
+  );
+
+  const minY = 0;
+
+  const xStep = (W - padX*2) / (seriesA.length - 1 || 1);
+  const yScale = (H - padY*2) / (maxY - minY || 1);
+
+  // Background grid
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  ctx.strokeStyle = "rgba(255,255,255,0.10)";
+  ctx.lineWidth = 1;
+
+  const gridLines = 4;
+  for (let i=0;i<=gridLines;i++){
+    const y = padY + ((H - padY*2) * i / gridLines);
+    ctx.beginPath();
+    ctx.moveTo(padX, y);
+    ctx.lineTo(W - padX, y);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Helper to map points
+  const toXY = (i, yVal) => {
+    const x = padX + i * xStep;
+    const y = H - padY - ((yVal - minY) * yScale);
+    return {x,y};
   };
-}
 
-// Modal controls
-function openModal() {
-  modal.classList.add("isOpen");
-  modal.setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
-}
-function closeModal() {
-  modal.classList.remove("isOpen");
-  modal.setAttribute("aria-hidden", "true");
-  document.body.style.overflow = "";
-  playerFrame.src = "";
-  currentItem = null;
-  currentEmbedUrl = "";
-  progressFill.style.width = "0%";
-  progressText.textContent = "0%";
-  messageArea.textContent = "Waiting for player events…";
-}
-
-function openPlayer(item, { resume = false } = {}) {
-  currentItem = item;
-
-  // Set accent for the session
-  setAccent(item.accent || "4DA3FF");
-
-  const key = contentKey(item);
-  const last = loadProgress(key);
-  const resumeSeconds =
-    resume && last?.data?.currentTime ? Number(last.data.currentTime) :
-    resume && last?.data?.timestamp ? Number(last.data.timestamp) : // fallback
-    resume && last?.data?.progress ? null :
-    resume && last?.currentTime ? Number(last.currentTime) :
-    null;
-
-  const url = buildEmbedUrl(item, {
-    progressSeconds: (typeof resumeSeconds === "number" && resumeSeconds > 0) ? resumeSeconds : undefined
-  });
-
-  currentEmbedUrl = url;
-
-  modalTitleEl.textContent = item.title;
-  modalSubEl.textContent =
-    item.mediaType === "tv"
-      ? `TV · TMDB ${item.id} · S${item.season ?? 1}E${item.episode ?? 1}`
-      : `Movie · TMDB ${item.id}`;
-
-  // If we have saved progress percent, show it immediately
-  const pct = last?.data?.progress ?? last?.progress ?? 0;
-  if (typeof pct === "number") {
-    progressFill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
-    progressText.textContent = `${pct.toFixed(0)}%`;
+  // Axis labels (right-aligned minimal)
+  ctx.save();
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.font = "12px Inter, system-ui";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  for (let i=0;i<=gridLines;i++){
+    const value = Math.round(maxY - (maxY * i / gridLines));
+    const y = padY + ((H - padY*2) * i / gridLines);
+    ctx.fillText(String(value), padX - 10, y);
   }
+  ctx.restore();
 
-  playerFrame.src = url;
-  openModal();
-}
+  // Line function
+  function plot(series, stroke){
+    ctx.save();
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 2.6;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
 
-// Escape
-function escapeHTML(str) {
-  return String(str ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
+    // Glow
+    ctx.shadowColor = stroke;
+    ctx.shadowBlur = 10;
 
-// --- Player events (Vidking postMessage) ---
-window.addEventListener("message", function (event) {
-  // You may want to restrict origins in production:
-  // if (event.origin !== "https://www.vidking.net") return;
+    ctx.beginPath();
+    series.forEach((p, i) => {
+      const {x,y} = toXY(i, p.y);
+      if (i === 0) ctx.moveTo(x,y);
+      else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
 
-  if (!currentItem) return;
-  if (typeof event.data !== "string") return;
-
-  // Their docs show the iframe posts JSON strings
-  let parsed = null;
-  try {
-    parsed = JSON.parse(event.data);
-  } catch {
-    // If it's not JSON, still show it
-    messageArea.textContent = String(event.data).slice(0, 220);
-    return;
-  }
-
-  messageArea.textContent = JSON.stringify(parsed).slice(0, 240);
-
-  if (parsed?.type === "PLAYER_EVENT" && parsed?.data) {
-    const key = contentKey(currentItem);
-    // Save the full payload; you'll have it for resume logic
-    saveProgress(key, parsed);
-
-    // Update UI progress
-    const pct = parsed.data.progress;
-    if (typeof pct === "number") {
-      const clamped = Math.max(0, Math.min(100, pct));
-      progressFill.style.width = `${clamped}%`;
-      progressText.textContent = `${clamped.toFixed(0)}%`;
-    }
-  }
-});
-
-// --- Navigation ---
-function setRoute(route) {
-  const routes = ["home", "movies", "tv", "continue"];
-  const r = routes.includes(route) ? route : "home";
-
-  document.querySelectorAll(".navItem").forEach(btn => {
-    btn.classList.toggle("isActive", btn.getAttribute("data-route") === r);
-  });
-
-  const title = r === "home" ? "Home"
-    : r === "movies" ? "Movies"
-    : r === "tv" ? "TV"
-    : "Continue Watching";
-
-  pageTitleEl.textContent = title;
-
-  // Filter rails based on route
-  if (r === "movies") renderRails("movie");
-  else if (r === "tv") renderRails("tv");
-  else if (r === "continue") {
-    // show only items with saved progress
-    const all = CATALOG.rails.flatMap(x => x.items);
-    const withProgress = all.filter(it => {
-      const last = loadProgress(contentKey(it));
-      const pct = last?.data?.progress ?? last?.progress ?? 0;
-      return typeof pct === "number" && pct > 0;
+    // Points
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = stroke;
+    series.forEach((p, i) => {
+      const {x,y} = toXY(i, p.y);
+      ctx.beginPath();
+      ctx.arc(x, y, 3.3, 0, Math.PI*2);
+      ctx.fill();
     });
 
-    railsEl.innerHTML = `
-      <div class="rail">
-        <div class="railTop">
-          <div>
-            <div class="railTitle">Continue Watching</div>
-            <div class="railSub">Titles with saved progress (localStorage)</div>
-          </div>
-          <div class="railSub">${withProgress.length} titles</div>
-        </div>
-        <div class="row">
-          ${withProgress.length ? withProgress.map(cardHTML).join("") : `<div class="tiny">Nothing yet — play something first.</div>`}
-        </div>
-      </div>
+    ctx.restore();
+  }
+
+  // Colors match legend CSS vibe
+  plot(seriesA, "rgba(34,211,238,0.95)");   // visits
+  plot(seriesB, "rgba(124,92,255,0.95)");  // waitlist
+}
+
+function updateTable(rows){
+  const tbody = $("#tableBody");
+  tbody.innerHTML = "";
+
+  rows.slice().reverse().forEach(r => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td class="num">${fmtInt(r.visits)}</td>
+      <td class="num">${fmtInt(r.signups)}</td>
+      <td class="num">${fmtInt(r.leads)}</td>
+      <td class="num">${fmtPct(r.conversion)}</td>
     `;
 
-    railsEl.querySelectorAll(".card").forEach((card) => {
-      const raw = decodeURIComponent(card.getAttribute("data-item") || "");
-      const item = JSON.parse(raw);
-      card.addEventListener("click", () => openPlayer(item, { resume: true }));
-    });
-  } else {
-    renderRails(searchInput.value);
-  }
-
-  // Close sidebar on mobile
-  const sb = document.querySelector(".sidebar");
-  if (sb && window.matchMedia("(max-width: 960px)").matches) {
-    sb.classList.remove("isOpen");
-    sidebarOpen = false;
-  }
+    tbody.appendChild(tr);
+  });
 }
 
-// --- Wire up UI events ---
-document.querySelectorAll(".navItem").forEach(btn => {
-  btn.addEventListener("click", () => setRoute(btn.getAttribute("data-route")));
-});
+function sum(arr, key){
+  return arr.reduce((acc, x) => acc + (x[key] || 0), 0);
+}
 
-$("#modalBackdrop").addEventListener("click", closeModal);
-$("#closeModal").addEventListener("click", closeModal);
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeModal();
-});
+function updateKPIs(range){
+  const data = state.data.slice(-range);
+  const prev = state.data.slice(-(range*2), -range);
 
-$("#resumeBtn").addEventListener("click", () => {
-  if (!currentItem) return;
-  openPlayer(currentItem, { resume: true });
-});
+  const signups = sum(data, "signups");
+  const visits = sum(data, "visits");
+  const leads = sum(data, "leads");
+  const conv = visits > 0 ? (signups / visits) * 100 : 0;
 
-$("#copyLinkBtn").addEventListener("click", async () => {
-  if (!currentEmbedUrl) return;
-  try {
-    await navigator.clipboard.writeText(currentEmbedUrl);
-    alert("Copied embed URL!");
-  } catch {
-    prompt("Copy this URL:", currentEmbedUrl);
-  }
-});
+  const signupsPrev = sum(prev, "signups");
+  const visitsPrev = sum(prev, "visits");
+  const leadsPrev = sum(prev, "leads");
+  const convPrev = visitsPrev > 0 ? (signupsPrev / visitsPrev) * 100 : 0;
 
-searchInput.addEventListener("input", (e) => {
-  const v = e.target.value || "";
-  const active = document.querySelector(".navItem.isActive")?.getAttribute("data-route") || "home";
-  if (active === "continue") return; // keep continue list intact
-  renderRails(v);
-});
+  $("#kpiSignups").textContent = fmtInt(signups);
+  $("#kpiVisits").textContent = fmtInt(visits);
+  $("#kpiLeads").textContent = fmtInt(leads);
+  $("#kpiConversion").textContent = fmtPct(conv);
 
-colorToggleBtn.addEventListener("click", () => {
-  // Rotate through a few “platform” accents
-  const accents = ["4DA3FF", "e50914", "9146ff", "0dcaf0", "22c55e", "f59e0b", "ec4899"];
-  const cur = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#4DA3FF";
-  const curHex = cur.replace("#", "");
-  const idx = accents.findIndex(a => a.toLowerCase() === curHex.toLowerCase());
-  const next = accents[(idx + 1 + accents.length) % accents.length];
-  setAccent(next);
-});
+  setDelta($("#deltaSignups"), pctChange(signups, signupsPrev));
+  setDelta($("#deltaVisits"), pctChange(visits, visitsPrev));
+  setDelta($("#deltaLeads"), pctChange(leads, leadsPrev));
+  setDelta($("#deltaConversion"), pctChange(conv, convPrev));
+}
 
-const hamburger = document.querySelector(".hamburger");
-hamburger.addEventListener("click", () => {
-  const sb = document.querySelector(".sidebar");
-  sidebarOpen = !sidebarOpen;
-  sb.classList.toggle("isOpen", sidebarOpen);
-});
+function updateChart(range){
+  const data = state.data.slice(-range);
+  const maxVisits = Math.max(...data.map(d => d.visits));
+  const maxSignups = Math.max(...data.map(d => d.signups));
 
-// --- Init ---
-renderHero(CATALOG.featured);
-renderRails();
-setRoute("home");
+  // Put them on roughly comparable scale by normalizing signups up to visits range
+  const scale = maxSignups > 0 ? (maxVisits / maxSignups) : 1;
+
+  const seriesVisits = data.map(d => ({ x: d.date, y: d.visits }));
+  const seriesWaitlist = data.map(d => ({ x: d.date, y: Math.round(d.signups * scale) }));
+
+  drawChart($("#chart"), seriesVisits, seriesWaitlist);
+}
+
+function setLastUpdated(){
+  const d = new Date();
+  const t = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  $("#lastUpdated").textContent = `${formatDate(d)} ${t}`;
+}
+
+function setRange(range){
+  state.range = range;
+  updateKPIs(range);
+  updateChart(range);
+  updateTable(state.data.slice(-range));
+  setLastUpdated();
+}
+
+function wireUI(){
+  $$(".seg").forEach(btn => {
+    btn.addEventListener("click", () => {
+      $$(".seg").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      setRange(Number(btn.dataset.range));
+    });
+  });
+
+  $("#refreshBtn").addEventListener("click", () => {
+    // regenerate data so it feels like a refresh
+    state.data = generateData(60);
+    setRange(state.range);
+
+    // small status pulse
+    const pill = $("#statusPill");
+    pill.animate(
+      [{ transform: "translateY(0)" }, { transform: "translateY(-2px)" }, { transform: "translateY(0)" }],
+      { duration: 320, easing: "ease-out" }
+    );
+  });
+}
+
+function init(){
+  $("#year").textContent = String(new Date().getFullYear());
+  state.data = generateData(60);
+  wireUI();
+  setRange(state.range);
+}
+
+init();
